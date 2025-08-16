@@ -2,6 +2,10 @@ var sheetName = 'Sheet1';
 var activityLogSheet = 'ActivityLog';
 var scriptProp = PropertiesService.getScriptProperties();
 
+/**
+ * 🛠️ Initial Setup Function
+ * Creates the ActivityLog sheet and stores the spreadsheet ID
+ */
 function intialSetup() {
   var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   scriptProp.setProperty('key', activeSpreadsheet.getId());
@@ -9,40 +13,51 @@ function intialSetup() {
   // Create ActivityLog sheet if it doesn't exist
   var sheets = activeSpreadsheet.getSheets().map(s => s.getName());
   if (!sheets.includes(activityLogSheet)) {
-    activeSpreadsheet.insertSheet(activityLogSheet);
-    var logSheet = activeSpreadsheet.getSheetByName(activityLogSheet);
+    var logSheet = activeSpreadsheet.insertSheet(activityLogSheet);
     logSheet.appendRow(['Timestamp', 'Action', 'Details']);
   }
 }
 
+/**
+ * 📩 doPost Handler
+ * Accepts POST requests and logs data into Sheet1 and ActivityLog
+ */
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  lock.tryLock(10000);
+  lock.tryLock(10000); // Wait up to 10 seconds for the lock
 
   try {
     var doc = SpreadsheetApp.openById(scriptProp.getProperty('key'));
     var sheet = doc.getSheetByName(sheetName);
-    var newRow = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues()[0];
-    var header = newRow.map(function(header) {
-      return header === 'Time' 
-        ? Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd-MM-yyyy hh:mm:ss') 
+
+    // Get header row from Sheet1
+    var headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    // Prepare new row based on incoming parameters
+    var newRow = headerRow.map(function(header) {
+      return header === 'Time'
+        ? Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd-MM-yyyy hh:mm:ss')
         : e.parameter[header];
     });
 
-    sheet.getRange(sheet.getLastRow() + 1, 1, 1, newRow.length).setValues([header]);
+    // Append new data to Sheet1
+    sheet.appendRow(newRow);
 
-    // Log the activity
+    // Log the activity in ActivityLog sheet
     var logSheet = doc.getSheetByName(activityLogSheet);
     var timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd-MM-yyyy hh:mm:ss');
     var details = JSON.stringify(e.parameter);
     logSheet.appendRow([timestamp, 'New entry added to Sheet1', details]);
 
+    // Return success response
     return ContentService
-      .createTextOutput(JSON.stringify({ 'result': 'success', 'row': header }))
+      .createTextOutput(JSON.stringify({ result: 'success', row: newRow }))
       .setMimeType(ContentService.MimeType.JSON);
+
   } catch (error) {
+    // Return error response
     return ContentService
-      .createTextOutput(JSON.stringify({ 'result': 'error', 'error': error }))
+      .createTextOutput(JSON.stringify({ result: 'error', error: error }))
       .setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
