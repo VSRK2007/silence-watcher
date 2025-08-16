@@ -39,3 +39,17 @@
 🕵️ Step 8: Silent Monitoring Begins
 - Once everything is set up, your phone will start logging data silently to the spreadsheet.
 - You can open the spreadsheet anytime to view the logs and monitor activity.
+
+
+🔐 Key Concepts Used
+| Concept | Role in Script | 
+| PropertiesService | Stores the spreadsheet ID for later use | 
+| LockService | Prevents race conditions when multiple requests hit the script simultaneously | 
+| doPost(e) | Triggered when a POST request is sent to the Web App | 
+| Utilities.formatDate() | Formats timestamps for logging | 
+| ContentService | Sends back a JSON response to the sender | 
+
+
+
+
+
